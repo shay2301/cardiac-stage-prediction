@@ -15,7 +15,6 @@ def convert_to_list(input_string):
     number_list = [list(map(int, match)) for match in matches]
     return number_list
 
-# def imshow(img, mask=None, FileName=None, is_esv=True):
 def imshow(batch, alpha=0.5):
     esv_imgs = batch['frames']['esv']
     edv_imgs = batch['frames']['edv']

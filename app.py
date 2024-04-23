@@ -20,9 +20,5 @@ dataloader = DataLoader(dataset, batch_size=6)
 
 model = unet.UNet(n_channels=1, n_classes=1)
 
-# Usage example
 for batch in dataloader:
-    # imshow(batch['frames']['esv'][0], batch['masks']['esv'][0], batch['FileName'][0])
     imshow(batch, alpha=0.9)
-    # print(batch['FileName'])
-    # print(batch['frames'], batch['masks'])
