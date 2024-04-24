@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -62,19 +63,43 @@ class Patient():
         self.edv_frame = None
         self.esv_mask = None
         self.edv_mask = None
+        self.split = None
 
 class VideoFrameDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, split_group=None, split_method=None, test_size=0.2, val_size=0.2):
         self.root_dir = root_dir
         csv_file = os.path.join(root_dir, 'Database', 'training_database.csv')
-        self.data_frame = pd.read_csv(csv_file)
+        self.df = pd.read_csv(csv_file)
+        self.df_train = None
+        self.df_val = None
+        self.df_test = None
         self.transform = transform
+        self.split_group = split_group
+        self.split_method = split_method
+        self.test_size = test_size
+        self.val_size = val_size
+
+        if not self.split_method:
+            self.df_train = self.df[self.df['Split'].str.lower() == 'train']
+            self.df_val = self.df[self.df['Split'].str.lower() == 'val']
+            self.df_test = self.df[self.df['Split'].str.lower() == 'test']
+        elif self.split_method=='EF':
+            self.df['EF_bins'] = pd.cut(self.df['EF'], bins=10)
+            self.df_train, self.df_test = train_test_split(self.df, test_size=self.test_size, stratify=self.df['EF_bins'], random_state=42)
+            self.df_train, self.df_val = train_test_split(self.df_train, test_size=self.val_size/(1-self.test_size), stratify=self.df_train['EF_bins'], random_state=42)
+        
+        if self.split_group == 'train':
+            self.df = self.df_train
+        elif self.split_group == 'val':
+            self.df = self.df_val
+        elif self.split_group == 'test':
+            self.df = self.df_test
 
     def __len__(self):
-        return len(self.data_frame)
+        return len(self.df)
 
     def __getitem__(self, idx):
-        row = self.data_frame.iloc[idx]
+        row = self.df.iloc[idx]
         patient = Patient(row['FileName'].replace('.avi', ''))
         patient.video_path = os.path.join(self.root_dir, 'EchoNet-Dynamic', 'Videos', row['FileName'])
         patient.esv_idx = row['ESV_frame']
@@ -107,18 +132,16 @@ class VideoFrameDataset(Dataset):
 
         patient.esv_mask = np.zeros((height, width), dtype=np.uint8)
         patient.edv_mask = np.zeros((height, width), dtype=np.uint8)
+
         
         cv2.fillPoly(patient.esv_mask, [np.array(convert_to_list(patient.esv_poly))], 255)
         cv2.fillPoly(patient.edv_mask, [np.array(convert_to_list(patient.edv_poly))], 255)
+
+        patient.esv_mask = np.expand_dims(patient.esv_mask, axis=0)
+        patient.edv_mask = np.expand_dims(patient.edv_mask, axis=0)
 
         return {'FileName': patient.patient_id,
             'frames': {'esv': patient.esv_frame,
                    'edv': patient.edv_frame},
         'masks': {'esv': patient.esv_mask,
                   'edv': patient.edv_mask}}
-
-# def process_polygon(polygon_str):
-    
-#     # Implement your function to convert polygon string to a mask
-#     pass
-

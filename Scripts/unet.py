@@ -4,6 +4,31 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 
+def train(model, optimizer, criterion, dataloader, epochs=10):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+    for epoch in range(epochs):
+        model.train()
+        for i, batch in enumerate(dataloader):
+            frames_esv = batch['frames']['esv']
+            frames_edv = batch['frames']['edv']
+            masks_esv = batch['masks']['esv']
+            masks_edv = batch['masks']['edv']
+            frames = torch.cat((frames_esv, frames_edv), dim=0)
+            masks = torch.cat((masks_esv, masks_edv), dim=0)
+            optimizer.zero_grad()
+            frames = frames.to(device)
+            masks = masks.to(device).float()
+            outputs = model(frames)
+            loss = criterion(outputs, masks)
+            loss.backward()
+            optimizer.step()
+            if i % 10 == 0:
+                print(f'Epoch: {epoch}, Batch: {i}, Loss: {loss.item()}')
+        print(f'Epoch: {epoch}, Loss: {loss.item()}')
+    print('Finished Training')
+    return model
+
 class DoubleConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(DoubleConv, self).__init__()
