@@ -16,7 +16,7 @@ def convert_to_list(input_string):
     number_list = [list(map(int, match)) for match in matches]
     return number_list
 
-def imshow(batch, alpha=0.5):
+def imshow(batch, esv_edv_pred_imgs=None, alpha=0.5):
     esv_imgs = batch['frames']['esv']
     edv_imgs = batch['frames']['edv']
     esv_masks = batch['masks']['esv']
@@ -25,23 +25,37 @@ def imshow(batch, alpha=0.5):
     edv_imgs = [np.transpose(img.numpy(), (1, 2, 0)) for img in edv_imgs]
     esv_masks = [mask.numpy() for mask in esv_masks]
     edv_masks = [mask.numpy() for mask in edv_masks]
-    esv_rgba_masks = [np.zeros((mask.shape[0], mask.shape[1], 4), dtype=np.float32) for mask in esv_masks]
-    edv_rgba_masks = [np.zeros((mask.shape[0], mask.shape[1], 4), dtype=np.float32) for mask in edv_masks]
+    esv_rgba_masks = [np.zeros((mask.shape[1], mask.shape[2], 4), dtype=np.float32) for mask in esv_masks]
+    edv_rgba_masks = [np.zeros((mask.shape[1], mask.shape[2], 4), dtype=np.float32) for mask in edv_masks]
     for i, (edv_mask, esv_mask) in enumerate(zip(edv_masks, esv_masks)):
-        esv_rgba_masks[i][esv_mask > 0] = [0, 0, 1, alpha]
-        edv_rgba_masks[i][edv_mask > 0] = [0, 0, 1, alpha]
+        esv_rgba_masks[i][esv_mask.squeeze() > 0] = [0, 0, 1, alpha]
+        edv_rgba_masks[i][edv_mask.squeeze() > 0] = [0, 0, 1, alpha]
 
-        esv_rgba_masks[i][esv_mask == 0] = [0, 0, 0, 0]
-        edv_rgba_masks[i][edv_mask == 0] = [0, 0, 0, 0]
+        esv_rgba_masks[i][esv_mask.squeeze() == 0] = [0, 0, 0, 0]
+        edv_rgba_masks[i][edv_mask.squeeze() == 0] = [0, 0, 0, 0]
+    if esv_edv_pred_imgs:
+        esv_pred_imgs = esv_edv_pred_imgs[0]
+        edv_pred_imgs = esv_edv_pred_imgs[1]
+        esv_pred_rgba_masks = [np.zeros((mask.shape[1], mask.shape[2], 4), dtype=np.float32) for mask in esv_masks]
+        edv_pred_rgba_masks = [np.zeros((mask.shape[1], mask.shape[2], 4), dtype=np.float32) for mask in edv_masks]
+        for i, (esv_pred_img, edv_pred_img) in enumerate(zip(esv_pred_imgs, edv_pred_imgs)):
+            esv_pred_rgba_masks[i][esv_pred_img.squeeze() > 0.5] = [0, 1, 0, alpha]
+            edv_pred_rgba_masks[i][edv_pred_img.squeeze() > 0.5] = [0, 1, 0, alpha]
+
+            esv_pred_rgba_masks[i][esv_pred_img.squeeze() <= 0.5] = [0, 0, 0, 0]
+            edv_pred_rgba_masks[i][edv_pred_img.squeeze() <= 0.5] = [0, 0, 0, 0]
+
     fig, axes = plt.subplots(2, len(esv_imgs), figsize=(20, 20))
     plt.subplots_adjust(wspace=0, hspace=-0.5)
     for i, (esv_img, edv_img, esv_mask, edv_mask, filename) in enumerate(zip(esv_imgs, edv_imgs, esv_rgba_masks, edv_rgba_masks, batch['FileName'])):
         axes[0, i].imshow(esv_img, cmap='gray')
-        axes[0, i].imshow(esv_mask, alpha=0.5)
+        axes[0, i].imshow(esv_mask)
+        axes[0, i].imshow(esv_pred_rgba_masks[i])
         axes[0, i].axis('off')
         axes[0, i].set_title(filename)
         axes[1, i].imshow(edv_img, cmap='gray')
-        axes[1, i].imshow(edv_mask, alpha=0.5)
+        axes[1, i].imshow(edv_mask)
+        axes[1, i].imshow(edv_pred_rgba_masks[i])
         axes[1, i].axis('off')
     # axes[0, 0].set_ylabel('ESV', labelpad=15)
     # axes[1, 0].set_ylabel('EDV', labelpad=15)
@@ -66,14 +80,15 @@ class Patient():
         self.split = None
 
 class VideoFrameDataset(Dataset):
-    def __init__(self, root_dir, transform=None, split_group=None, split_method=None, test_size=0.2, val_size=0.2):
+    def __init__(self, root_dir, input_transform=None, target_transform=None,split_group=None, split_method=None, test_size=0.2, val_size=0.2):
         self.root_dir = root_dir
         csv_file = os.path.join(root_dir, 'Database', 'training_database.csv')
         self.df = pd.read_csv(csv_file)
         self.df_train = None
         self.df_val = None
         self.df_test = None
-        self.transform = transform
+        self.input_transform = input_transform
+        self.target_transform = target_transform
         self.split_group = split_group
         self.split_method = split_method
         self.test_size = test_size
@@ -114,11 +129,11 @@ class VideoFrameDataset(Dataset):
             cap.set(cv2.CAP_PROP_POS_FRAMES, index)
             ret, frame = cap.read()
             if ret:
-                if self.transform:
+                if self.input_transform:
                     if patient.esv_idx == index:
-                        patient.esv_frame = self.transform(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+                        patient.esv_frame = self.input_transform(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
                     elif patient.edv_idx == index:
-                        patient.edv_frame = self.transform(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+                        patient.edv_frame = self.input_transform(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
                 else:
                     if patient.esv_idx == index:
                         patient.esv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -137,8 +152,12 @@ class VideoFrameDataset(Dataset):
         cv2.fillPoly(patient.esv_mask, [np.array(convert_to_list(patient.esv_poly))], 255)
         cv2.fillPoly(patient.edv_mask, [np.array(convert_to_list(patient.edv_poly))], 255)
 
-        patient.esv_mask = np.expand_dims(patient.esv_mask, axis=0)
-        patient.edv_mask = np.expand_dims(patient.edv_mask, axis=0)
+        patient.esv_mask = np.expand_dims(patient.esv_mask, axis=2)
+        patient.edv_mask = np.expand_dims(patient.edv_mask, axis=2)
+
+        if self.target_transform:
+            patient.esv_mask = self.target_transform(patient.esv_mask)
+            patient.edv_mask = self.target_transform(patient.edv_mask)
 
         return {'FileName': patient.patient_id,
             'frames': {'esv': patient.esv_frame,

@@ -3,13 +3,31 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+import matplotlib.pyplot as plt
 
-def train(model, optimizer, criterion, dataloader, epochs=10):
+class DiceLoss(nn.Module):
+    def forward(self, input, target, smooth=10.):
+        input = torch.sigmoid(input)
+        iflat = input.view(-1)
+        tflat = target.view(-1)
+        intersection = (iflat * tflat).sum()
+        return 1 - ((2. * intersection + smooth) /
+                  (iflat.sum() + tflat.sum() + smooth))
+
+class iou(nn.Module):
+    def forward(self, input, target):
+        smooth = 1.
+        input = input.view(-1)
+        target = target.view(-1)
+        intersection = (input * target).sum()
+        return (intersection + smooth) / (input.sum() + target.sum() - intersection + smooth)
+    
+def train(model, optimizer, criterion, train_dataloader, val_dataloader, epochs=10):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     for epoch in range(epochs):
         model.train()
-        for i, batch in enumerate(dataloader):
+        for i, batch in enumerate(train_dataloader):
             frames_esv = batch['frames']['esv']
             frames_edv = batch['frames']['edv']
             masks_esv = batch['masks']['esv']
@@ -24,8 +42,29 @@ def train(model, optimizer, criterion, dataloader, epochs=10):
             loss.backward()
             optimizer.step()
             if i % 10 == 0:
-                print(f'Epoch: {epoch}, Batch: {i}, Loss: {loss.item()}')
-        print(f'Epoch: {epoch}, Loss: {loss.item()}')
+                print(f'Epoch: {epoch}, Batch: {i}, train Dice: {loss.item()}')
+        model.logs_di['epoch'].append(epoch)
+        model.logs_di['Dice'].append(loss.item())
+        model.logs_di['dataset'].append('train')
+        model.eval()
+        with torch.no_grad():
+            for i, batch in enumerate(val_dataloader):
+                frames_esv = batch['frames']['esv']
+                frames_edv = batch['frames']['edv']
+                masks_esv = batch['masks']['esv']
+                masks_edv = batch['masks']['edv']
+                frames = torch.cat((frames_esv, frames_edv), dim=0)
+                masks = torch.cat((masks_esv, masks_edv), dim=0)
+                frames = frames.to(device)
+                masks = masks.to(device).float()
+                outputs = model(frames)
+                loss = criterion(outputs, masks)
+                if i % 10 == 0:
+                    print(f'Epoch: {epoch}, Batch: {i}, val Dice: {loss.item()}')
+        model.logs_di['epoch'].append(epoch)
+        model.logs_di['Dice'].append(loss.item())
+        model.logs_di['dataset'].append('val')
+        print(f'Epoch: {epoch}, val Dice: {loss.item()}')
     print('Finished Training')
     return model
 
@@ -92,6 +131,7 @@ class UNet(nn.Module):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
+        self.logs_di = {'epoch':[], 'Dice':[], 'dataset':[]}
 
         self.inc = DoubleConv(n_channels, 64)
         self.down1 = Down(64, 128)
