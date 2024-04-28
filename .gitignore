@@ -326,7 +326,7 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-
+env/
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config
@@ -396,3 +396,5 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+.vscode/launch.json
+*.avi
