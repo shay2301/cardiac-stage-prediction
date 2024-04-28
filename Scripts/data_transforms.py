@@ -1,6 +1,5 @@
 from torchvision import transforms
 import torch
-import PIL
 import random
 
 class SameSeed:
@@ -25,7 +24,7 @@ input_transform = transforms.Compose([
     SameSeed(),
     RandomChoiceTransform([
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation((0, 360), resample=PIL.Image.BILINEAR),
+        transforms.RandomRotation((0, 360)),
     ], seed=42),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
@@ -35,7 +34,12 @@ target_transform = transforms.Compose([
     SameSeed(),
     RandomChoiceTransform([
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation((0, 360), resample=PIL.Image.BILINEAR),
+        transforms.RandomRotation((0, 360)),
     ], seed=42),
     transforms.ToTensor(),
+])
+
+video_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
 ])
