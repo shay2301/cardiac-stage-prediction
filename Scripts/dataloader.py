@@ -69,6 +69,7 @@ class Patient():
     def __init__(self, patient_id):
         self.patient_id = patient_id
         self.video_path = None
+        self.fps = None
         self.esv_idx = None
         self.edv_idx = None
         self.esv_poly = None
@@ -164,3 +165,41 @@ class VideoFrameDataset(Dataset):
                    'edv': patient.edv_frame},
         'masks': {'esv': patient.esv_mask,
                   'edv': patient.edv_mask}}
+
+class FullVideoDataset(Dataset):
+    def __init__(self, root_dir, input_transform=None):
+        self.root_dir = root_dir
+        csv_file = os.path.join(root_dir, 'Database', 'training_database.csv')
+        self.df = pd.read_csv(csv_file)
+        self.input_transform = input_transform
+
+    def __len__(self):
+        return len(self.df)
+    
+    def __getitem__(self, idx):
+        row = self.df.iloc[idx]
+        patient = Patient(row['FileName'].replace('.avi', ''))
+        patient.video_path = os.path.join(self.root_dir, 'EchoNet-Dynamic', 'Videos', row['FileName'])
+        patient.fps = row['FPS']
+        
+        cap = cv2.VideoCapture(patient.video_path)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frames = []
+        for frame_idx in range(frame_count):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ret, frame = cap.read()
+            if ret:
+                if self.input_transform:
+                    frames.append(self.input_transform(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)))
+                else:
+                    frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+            else:
+                raise Exception(f"Failed to read frame {frame_idx} from video {patient.video_path}")
+        cap.release()
+
+        # Pad frames if video is shorter than max_length
+        max_length = 1002
+        while len(frames) < max_length:
+            frames.append(torch.zeros_like(frames[0]))
+
+        return {'patient_id': patient.patient_id, 'frames': torch.stack(frames), 'fps': patient.fps}

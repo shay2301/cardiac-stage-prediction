@@ -13,16 +13,6 @@ import os
 root_dir = os.path.dirname(__file__)
 csv_full_path = os.path.join(root_dir, 'Database', 'training_database.csv')
 
-input_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-target_transform = transforms.Compose([
-    transforms.ToTensor(),
-    # transforms.Lambda(lambda x: x/255)
-])
-
 batch_size = 64
 
 train_dataset = dataloader.VideoFrameDataset(root_dir=root_dir, input_transform=input_transform, target_transform=target_transform, split_group='train')
@@ -45,4 +35,4 @@ criterion = unet.DiceLoss()
 
 trained_model = unet.train(model, optimizer, criterion, train_dataloader, val_dataloader, epochs=6)
 
-save(trained_model.state_dict(), os.path.join(root_dir, 'models', 'model_dice_6epochs.pth'))
+save(trained_model.state_dict(), os.path.join(root_dir, 'models', 'model_dice_6epochs_augmented.pth'))
