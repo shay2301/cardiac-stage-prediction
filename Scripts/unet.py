@@ -123,7 +123,7 @@ class OutConv(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
     def forward(self, x):
-        return self.conv(x)
+        return torch.sigmoid(self.conv(x))
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=True):
@@ -159,4 +159,4 @@ class UNet(nn.Module):
         return logits
     
     def predict(self, x):
-        return F.softmax(self.forward(x), dim=1)
+        return torch.sigmoid(self.forward(x))
