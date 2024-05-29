@@ -239,8 +239,12 @@ ClientBin/
 *.pfx
 *.publishsettings
 *.avi
+*.mp4
 **/*.mp4
 **/*.gif
+*.gif
+**/*.png
+*.png
 *.pth
 orleans.codegen.cs
 
