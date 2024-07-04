@@ -201,3 +201,30 @@ video_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.1283,), (0.1901,))
 ])
+
+class VideoTransforms:
+    """ Transform to convert video frames for input into 3D CNN, handling single-channel grayscale images. """
+    def __init__(self):
+        self.transform = transforms.Compose([
+            SameSeed(),
+            transforms.RandomRotation((0, 360)),
+            #  transforms.Resize((80, 80)),
+            transforms.Normalize((0.1283,), (0.1901,))
+        ])
+
+    def __call__(self, clip):
+        # Assume clip is a numpy array of shape [H, W, Max_frames]
+        # Convert to [Max_frames, H, W] to simulate a batch of grayscale images
+        clip = np.transpose(clip, (2, 0, 1))
+        transformed_clip = []
+        for frame in clip:
+            # Ensure frame is in [1, H, W] shape as a single-channel tensor
+            frame_tensor = torch.from_numpy(frame).unsqueeze(0).float()
+
+            # Apply the composed transforms
+            transformed_frame = self.transform(frame_tensor)
+            transformed_clip.append(transformed_frame)
+
+        # Stack all frames along a new dimension to create a single tensor
+
+        return torch.transpose(torch.stack(transformed_clip, dim=0), 1, 0)
