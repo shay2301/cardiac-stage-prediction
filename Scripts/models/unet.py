@@ -6,13 +6,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class DiceLoss(nn.Module):
-    def forward(self, input, target, smooth=10.):
+    def forward(self, input, target, smooth=0.1):
         input = torch.sigmoid(input)
         iflat = input.view(-1)
         tflat = target.view(-1)
         intersection = (iflat * tflat).sum()
         return 1 - ((2. * intersection + smooth) /
                   (iflat.sum() + tflat.sum() + smooth))
+    
+class CombinedBCEDiceLoss(nn.Module):
+    def __init__(self):
+        super(CombinedBCEDiceLoss, self).__init__()
+        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.dice_loss = DiceLoss()
+
+    def forward(self, input, target):
+        bce = self.bce_loss(input, target)
+        dice = self.dice_loss(input, target)
+        return bce + dice
 
 class iou(nn.Module):
     def forward(self, input, target):
@@ -22,9 +33,40 @@ class iou(nn.Module):
         intersection = (input * target).sum()
         return (intersection + smooth) / (input.sum() + target.sum() - intersection + smooth)
     
+class TverskyLoss(nn.Module):
+    def __init__(self, alpha=0.5, beta=0.5, smooth=1):
+        super(TverskyLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.smooth = smooth
+
+    def forward(self, inputs, targets):
+        inputs = torch.sigmoid(inputs)
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+
+        true_pos = (inputs * targets).sum()
+        false_neg = ((1 - inputs) * targets).sum()
+        false_pos = (inputs * (1 - targets)).sum()
+
+        tversky_index = (true_pos + self.smooth) / (true_pos + self.alpha * false_neg + self.beta * false_pos + self.smooth)
+        return 1 - tversky_index
+    
+class CustomLossWithFPR(nn.Module):
+    def __init__(self):
+        super(CustomLossWithFPR, self).__init__()
+        self.bce_loss = nn.BCELoss()
+
+    def forward(self, inputs, targets):
+        bce_loss = self.bce_loss(inputs, targets)
+        false_positives = torch.sum((inputs == 1) & (targets == 0)).float()
+        fpr_loss = false_positives / (torch.sum(targets == 0).float() + 1e-6)
+        return bce_loss + fpr_loss
+    
 def train(model, optimizer, criterion, train_dataloader, val_dataloader, epochs=10):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
+    dice_loss = DiceLoss()
     for epoch in range(epochs):
         model.train()
         for i, batch in enumerate(train_dataloader):
@@ -42,7 +84,10 @@ def train(model, optimizer, criterion, train_dataloader, val_dataloader, epochs=
             loss.backward()
             optimizer.step()
             if i % 10 == 0:
-                print(f'Epoch: {epoch}, Batch: {i}, train Dice: {loss.item()}')
+                if type(criterion) == DiceLoss:
+                    print(f'Epoch: {epoch}, Batch: {i}, train Dice loss: {loss.item()}')
+                else:
+                    print(f'Epoch: {epoch}, Batch: {i}, train loss: {loss.item()}, train dice coeff: {1-dice_loss(outputs, masks).item()}')
         model.logs_di['epoch'].append(epoch)
         model.logs_di['Dice'].append(loss.item())
         model.logs_di['dataset'].append('train')
@@ -60,11 +105,17 @@ def train(model, optimizer, criterion, train_dataloader, val_dataloader, epochs=
                 outputs = model(frames)
                 loss = criterion(outputs, masks)
                 if i % 10 == 0:
-                    print(f'Epoch: {epoch}, Batch: {i}, val Dice: {loss.item()}')
+                    if type(criterion) == DiceLoss:
+                        print(f'Epoch: {epoch}, Batch: {i}, val Dice loss: {loss.item()}')
+                    else:
+                        print(f'Epoch: {epoch}, Batch: {i}, val loss: {loss.item()}, val dice coeff: {1-dice_loss(outputs, masks).item()}')
         model.logs_di['epoch'].append(epoch)
         model.logs_di['Dice'].append(loss.item())
         model.logs_di['dataset'].append('val')
-        print(f'Epoch: {epoch}, val Dice: {loss.item()}')
+        if type(criterion) == DiceLoss:
+            print(f'Epoch: {epoch}, train Dice: {loss.item()}')
+        else:
+            print(f'Epoch: {epoch}, train loss: {loss.item()}, train dice coeff: {1-dice_loss(outputs, masks).item()}')
     print('Finished Training')
     return model
 
@@ -77,7 +128,8 @@ class DoubleConv(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            # nn.Dropout(0.5)
         )
 
     def forward(self, x):
@@ -123,7 +175,7 @@ class OutConv(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
     def forward(self, x):
-        return torch.sigmoid(self.conv(x))
+        return self.conv(x)
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=True):
