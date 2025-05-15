@@ -102,7 +102,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 The EchoNet-Dynamic dataset used in this project is subject to its own [Research Use Agreement](https://echonet.github.io/dynamic/).
 
 ## Contact
-[Your Name]  
-Email: [your.email@domain.com]  
-LinkedIn: [Your LinkedIn Profile URL]  
-GitHub: [Your GitHub Profile URL] 
+Shay Levi  
+Email: shay230@gmail.com  
+LinkedIn: [Shay Levi](https://www.linkedin.com/in/shaylevi/)  
+GitHub: [shay2301](https://github.com/shay2301/shay2301) 
