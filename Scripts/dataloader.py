@@ -46,22 +46,34 @@ def imshow(batch, esv_edv_pred_imgs=None, alpha=0.5, threshold=0.5):
             esv_pred_rgba_masks[i][esv_pred_img.squeeze() <= threshold] = [0, 0, 0, 0]
             edv_pred_rgba_masks[i][edv_pred_img.squeeze() <= threshold] = [0, 0, 0, 0]
 
-    fig, axes = plt.subplots(2, len(esv_imgs), figsize=(20, 20))
-    plt.subplots_adjust(wspace=0, hspace=-0.5)
+    fig, axes = plt.subplots(2, 2*len(esv_imgs), figsize=(20, 20))
+    # plt.subplots_adjust(wspace=0, hspace=-0.5)
     for i, (esv_img, edv_img, esv_mask, edv_mask, filename) in enumerate(zip(esv_imgs, edv_imgs, esv_rgba_masks, edv_rgba_masks, batch['FileName'])):
         axes[0, i].imshow(esv_img, cmap='gray')
-        axes[0, i].imshow(esv_mask)
-        axes[0, i].imshow(esv_pred_rgba_masks[i])
         axes[0, i].axis('off')
-        axes[0, i].set_title(filename)
+        axes[0, i].set_title('ESV')
+        axes[0, i+1].imshow(esv_img, cmap='gray')
+        axes[0, i+1].imshow(esv_mask)
+        axes[0, i+1].axis('off')
+        axes[0, i+1].set_title('ESV Mask')
+
         axes[1, i].imshow(edv_img, cmap='gray')
-        axes[1, i].imshow(edv_mask)
-        axes[1, i].imshow(edv_pred_rgba_masks[i])
         axes[1, i].axis('off')
+        axes[1, i].set_title('EDV')
+        axes[1, i+1].imshow(edv_img, cmap='gray')
+        axes[1, i+1].imshow(edv_mask)
+        axes[1, i+1].axis('off')
+        axes[1, i+1].set_title('EDV Mask')
+
+        # axes[i, 1].imshow(edv_img, cmap='gray')
+        # axes[i, 1].imshow(edv_mask)
+        # # axes[i].imshow(edv_pred_rgba_masks[i])
+        # axes[i, 1].axis('off')
+        # axes[i, 1].set_title(filename)
     # axes[0, 0].set_ylabel('ESV', labelpad=15)
     # axes[1, 0].set_ylabel('EDV', labelpad=15)
-    fig.text(0.04, 0.5, 'ESV', va='center', rotation='vertical')  # Set the row title for ESV
-    fig.text(0.04, 0.25, 'EDV', va='center', rotation='vertical')  # Set the
+    # fig.text(0.04, 0.5, 'ESV', va='center', rotation='vertical')  # Set the row title for ESV
+    # fig.text(0.04, 0.25, 'EDV', va='center', rotation='vertical')  # Set the
     plt.show()
 
 

@@ -408,3 +408,22 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+download.py
+EDA/EDA.ipynb
+EDA/EDA2.ipynb
+EchoNet-Dynamic/Videos/.DS_Store
+fft old.ipynb
+EC2_train_utime.py
+Dockerfile
+fft2.ipynb
+fft_higher_bpm.ipynb
+full_video_eval_1patient.py
+launch_ec2.py
+nebius_train_utime.py
+train_utime.py
+Scripts/Merge_dfs.ipynb
+model_per.ipynb
+Scripts/model_perf.py
+
+# Training database
+Database/training_database.csv
