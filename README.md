@@ -19,9 +19,10 @@ This project, developed during my time at VIZ.AI, focuses on identifying systoli
 - **Cloud Computing**: AWS EC2 (for training)
 
 ### Dataset
-- **Source**: EchoNet-Dynamic dataset
+- **Source**: [EchoNet-Dynamic dataset](https://echonet.github.io/dynamic/) - A large-scale dataset of echocardiogram videos from Stanford University
 - **Size**: Approximately 10,000 echocardiogram videos
 - **Type**: 2D echocardiogram videos with expert annotations
+- **Details**: Contains apical-4-chamber echocardiography videos with expert tracings of the left ventricle at end-systole and end-diastole
 
 ### Model Architecture
 - Implemented both U-Net and TransUNet architectures for 2D segmentation
@@ -78,7 +79,7 @@ This project, developed during my time at VIZ.AI, focuses on identifying systoli
 - Docker Containerization
 
 ## Future Improvements
-- Expand dataset size for better generalization
+- Test the model on real-world clinical data to validate performance in practical settings
 - Further optimize temporal consistency
 - Enhance post-processing pipeline
 - Explore real-time processing capabilities
