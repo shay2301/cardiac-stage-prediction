@@ -246,6 +246,9 @@ ClientBin/
 **/*.png
 *.png
 *.pth
+**/*.csv
+**/*.pem
+**/*.sh
 orleans.codegen.cs
 
 # Including strong name files can present a security risk
