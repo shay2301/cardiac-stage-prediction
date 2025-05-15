@@ -79,7 +79,6 @@ This project, developed during my time at VIZ.AI, focuses on identifying systoli
 
 ## Future Improvements
 - Expand dataset size for better generalization
-- Implement 3D CNN architecture
 - Further optimize temporal consistency
 - Enhance post-processing pipeline
 - Explore real-time processing capabilities
