@@ -97,7 +97,12 @@ This project, developed during my time at VIZ.AI, focuses on identifying systoli
 This project was developed as a proof-of-concept over a 6-month period at VIZ.AI. While the results are promising, there are opportunities for further improvement with additional data and development time.
 
 ## License
-[Add appropriate license information]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The EchoNet-Dynamic dataset used in this project is subject to its own [Research Use Agreement](https://echonet.github.io/dynamic/).
 
 ## Contact
-[Add your contact information] 
+[Your Name]  
+Email: [your.email@domain.com]  
+LinkedIn: [Your LinkedIn Profile URL]  
+GitHub: [Your GitHub Profile URL] 
